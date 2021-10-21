@@ -84,10 +84,6 @@ color:
     green: 3%
     blue: 5%
 
-# spi:
-#   clk_pin: GPIO18
-#   mosi_pin: GPIO19
-
 sensor:
   - platform: wifi_signal
     name: Wifi SSI
@@ -150,9 +146,6 @@ text_sensor:
     entity_id: water_heater.hot_water
     attribute: operation_mode
 
-
-
-
 output:
   - platform: ledc
     pin: GPIO21
@@ -161,7 +154,6 @@ output:
     pin: 15
     id: gpio_32_backlight_pwm
     inverted: true
-
 
 script:
   - id: beep
@@ -258,10 +250,8 @@ binary_sensor:
                       entity_id: water_heater.hot_water
                       time_period: '00:01:00'
 
-
     # on_state:
     #   - lambda: 'ESP_LOGI("main", "key0: %s", (x ? "touch" : "release"));'
-
 
 select:
   - platform: template
@@ -277,15 +267,6 @@ select:
       - "none"
       - "boost"
     #internal: true
-
-
-
-# font:
-#   - file: "arial.ttf"
-#     id: my_font
-#     size: 20
-
-
 
 # Define a monochromatic, dimmable light for the backlight
 light:
