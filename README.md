@@ -10,4 +10,8 @@ Noone really knows how much hot water is left at any time.  So people end up boo
 So the question is complex.
 
 ## The solution
-I connected a series of sensors to the tank allowing reporting of the temperature at 7 levels.
+Connected a series 7 of DS18B20 sensors to the tank via a sonoff TH16 allowing reporting of the temperature at 7 levels.  Asside: I made a small cgi script https://github.com/davet2001/miscellaneous/blob/master/dhw_tank.cgi that visuallises this.
+
+Then an ESPhome controlled AZ-Touch box mounted on the wall displays a picture of the tank, ranging from red to blue showing the 'level' of hot water.  On top of this tank is the estimated number of litres of 40degC water available, as well as the approx number of baths this produces.
+
+The aim: people look at this display before deciding to boost the water with gas.
