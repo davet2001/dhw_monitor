@@ -2,7 +2,7 @@
 ## Summary
 An ESP32 controlled Home-Assistant connected wall mounted display to provide accurate heating information to help save energy.
 ## Background
-My house has a hot water tank, heated by a natural gas boiler.  Backup heating is available via am electric heating element ("immersion heater").  Generally this tank gets heated up at strategic times of the day, then used by the family (showers, baths etc) in an unpredictable pattern.
+My house has a hot water tank, heated by a natural gas boiler.  Backup heating is available via an electric heating element ("immersion heater").  Generally this tank gets heated up at strategic times of the day, then used by the family (showers, baths etc) in an unpredictable pattern.
 In addition, last year I set up an intelligent controller to switch on the immersion heater when our solar panels are producing excess electricity.  In normal sunny weather (spring-autumn) this is more than enough to heat the tank.
 
 ## The problem
