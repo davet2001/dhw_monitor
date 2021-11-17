@@ -51,10 +51,11 @@ image:
     type: RGB24
 
 animation:
-  - file: "flame.gif"
+  - file: "flame5.gif"
     id: flame_gif
     resize: 32x32
-    type: BINARY
+    #type: BINARY
+    type: RGB24
 
 interval:
   - interval: 0.2s
@@ -207,8 +208,8 @@ binary_sensor:
     id: ch_boost_key0
     x_min: 20 #0+20
     x_max: 220 #240-20
-    y_min: 20 #0+20
-    y_max: 180 #320/2-20
+    y_min: 180 #320/2+20
+    y_max: 300 #320-20
     on_press:
       then:
         - script.execute: beep
@@ -229,8 +230,8 @@ binary_sensor:
     id: dhw_boost_key0
     x_min: 20 #0+20
     x_max: 220 #240-20
-    y_min: 180 #320/2+20
-    y_max: 300 #320-20
+    y_min: 20 #0+20
+    y_max: 180 #320/2-20
     on_press:
       then:
         - script.execute: beep
@@ -248,15 +249,15 @@ binary_sensor:
                   id: dhw_boost_local
                   option: "none"
               - homeassistant.service: # intelligent boost dhw stop
-                    service: script.turn_off
-                    data:
-                      entity_id: script.1632605690960
+                  service: script.turn_off
+                  data:
+                    entity_id: script.1632605690960
               - homeassistant.service: # also stop the boost.
-                    service: hive.boost_hot_water
-                    data:
-                      on_off: 'off'
-                      entity_id: water_heater.hot_water
-                      time_period: '00:01:00'
+                  service: hive.boost_hot_water
+                  data:
+                    on_off: 'off'
+                    entity_id: water_heater.hot_water
+                    time_period: '00:01:00'
 
 
     # on_state:
@@ -302,7 +303,7 @@ display:
     dc_pin: 4
     led_pin: 15
     reset_pin: 22
-    rotation: 270
+    rotation: 90
     id: tft_ha
     color_palette: IMAGE_ADAPTIVE
     color_palette_images:
