@@ -5,6 +5,12 @@ esphome:
   board: esp32doit-devkit-v1
   includes:
     - dhwmonitor.h
+  on_boot:
+    priority: 30
+    then:
+      - light.turn_on:
+          id: back_light
+          brightness: 60%
 
 wifi:
   ssid: !secret wifi_ssid
@@ -39,6 +45,12 @@ font:
   - file: "segoeui.ttf"
     id: font_max
     size: 72
+  - file: "materialdesignicons-webfont.ttf"
+    id: font_icon
+    size: 30
+    glyphs: [
+      "\U000F0FC6", # mdi-lock-open
+    ]
 
 image:
   - file: "peter_100x100.png"
@@ -51,17 +63,20 @@ image:
     type: RGB24
 
 animation:
-  - file: "flame5.gif"
+  - file: "flame10.gif"
     id: flame_gif
     resize: 32x32
-    #type: BINARY
+    type: RGB24
+  - file: "sun3.gif"
+    id: sun_gif
+    resize: 32x32
     type: RGB24
 
-interval:
-  - interval: 0.2s
-    then:
-      lambda: |-
-        id(flame_gif).next_frame();
+# interval:
+#   - interval: 0.2s
+#     then:
+#       lambda: |-
+#         id(flame_gif).next_frame();
 
 color:
   - id: darkbrown1
@@ -84,6 +99,10 @@ color:
     red: 100%
     green: 3%
     blue: 5%
+
+# spi:
+#   clk_pin: GPIO18
+#   mosi_pin: GPIO19
 
 sensor:
   - platform: wifi_signal
@@ -147,6 +166,9 @@ text_sensor:
     entity_id: water_heater.hot_water
     attribute: operation_mode
 
+
+
+
 output:
   - platform: ledc
     pin: GPIO21
@@ -155,6 +177,7 @@ output:
     pin: 15
     id: gpio_32_backlight_pwm
     inverted: true
+
 
 script:
   - id: beep
@@ -250,9 +273,25 @@ binary_sensor:
                     on_off: 'off'
                     entity_id: water_heater.hot_water
                     time_period: '00:01:00'
-
     # on_state:
     #   - lambda: 'ESP_LOGI("main", "key0: %s", (x ? "touch" : "release"));'
+  - platform: homeassistant
+    entity_id: binary_sensor.aqaradoor3
+    id: conservatory_door_lock
+    internal: true
+  - platform: homeassistant
+    entity_id: binary_sensor.aqaradoor5
+    id: garage_door_lock
+    internal: true
+  - platform: homeassistant
+    entity_id: binary_sensor.aqaradoor4
+    id: kitchen_door_lock
+    internal: true
+  - platform: homeassistant
+    id: solar_heater
+    entity_id: switch.immersion_heater
+    internal: true
+
 
 select:
   - platform: template
@@ -269,6 +308,15 @@ select:
       - "boost"
     #internal: true
 
+
+
+# font:
+#   - file: "arial.ttf"
+#     id: my_font
+#     size: 20
+
+
+
 # Define a monochromatic, dimmable light for the backlight
 light:
   - platform: monochromatic
@@ -276,6 +324,7 @@ light:
     name: "ILI9341 Display Backlight"
     id: back_light
     restore_mode: ALWAYS_ON
+
 
 display:
   - platform: ili9341
@@ -290,9 +339,11 @@ display:
     color_palette_images:
       #- "peter_100x100.png"
       - "display_design.png"
-
+    update_interval: 1s
     lambda: |-
-      it.fill(Color::BLACK);
+      id(flame_gif).next_frame();
+      id(sun_gif).next_frame();
+      //it.fill(Color::BLACK);
       signed int ssi = (signed int)id(wifi_ssi).state;
       it.strftime(1, 2, id(font_sml), lightblue1, TextAlign::TOP_LEFT, "%H:%M", id(esptime).now());
       it.printf(it.get_width()-30-5, 2, id(font_sml), lightblue1, TextAlign::TOP_RIGHT, "%s", id(wifi_ssid).state.c_str());
@@ -377,7 +428,21 @@ display:
       }
       //it.printf(320-width/2, 160, id(font_med), COLOR_ON, TextAlign::TOP_CENTER, "s=%s", id(dhw_mode).state.c_str());
       if (id(dhw_mode).state == "on" || id(dhw_mode).state == "boost") {
-         it.image(255, 203, id(flame_gif), COLOR_ON, COLOR_OFF);
+         it.image(it.get_width() - 50-16, 203, id(flame_gif));
+      }
+      else if (id(solar_heater).state) {
+         it.image(it.get_width() - 50-16, 203, id(sun_gif));
       }
 
+      if (id(conservatory_door_lock).state) {
+        it.print(50, 68, id(font_icon),  my_red, TextAlign::BOTTOM_CENTER, "\U000F0FC6");
+        it.print(50, 69, id(font_sml), my_red, TextAlign::TOP_CENTER, "Conservatory");
+      }
 
+      if (id(garage_door_lock).state || id(kitchen_door_lock).state || id(garage_door_lock).state) {
+        it.print(it.get_width()/2, 200, id(font_icon), my_red, TextAlign::BOTTOM_CENTER, "\U000F0FC6");
+        it.printf(it.get_width()/2, 201, id(font_sml), my_red, TextAlign::TOP_CENTER, "%s%s%s",
+          id(conservatory_door_lock).state ? "Conservatory " : "",
+          id(kitchen_door_lock).state ? "Kitchen " : "",
+          id(garage_door_lock).state ? "Garage " : "");
+      }
