@@ -26,7 +26,13 @@ logger:
 
 # Enable Home Assistant API
 api:
-
+  services:
+    - service: play_rtttl
+      variables:
+        song_str: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song_str;'
 ota:
 
 time:
@@ -50,6 +56,7 @@ font:
     size: 30
     glyphs: [
       "\U000F0FC6", # mdi-lock-open
+      "\U000F0319", # mdi-lan-disconnect
     ]
 
 image:
@@ -114,42 +121,52 @@ sensor:
     name: "Tank Sensor 1 HA"
     entity_id: sensor.temperature1
     id: temperature1
+    internal: true
   - platform: homeassistant
     name: "Tank Sensor 2 HA"
     entity_id: sensor.temperature2
     id: temperature2
+    internal: true
   - platform: homeassistant
     name: "Tank Sensor 3 HA"
     entity_id: sensor.temperature3
     id: temperature3
+    internal: true
   - platform: homeassistant
     name: "Tank Sensor 4 HA"
     entity_id: sensor.temperature4
     id: temperature4
+    internal: true
   - platform: homeassistant
     name: "Tank Sensor 5 HA"
     entity_id: sensor.temperature5
     id: temperature5
+    internal: true
   - platform: homeassistant
     name: "Tank Sensor 6 HA"
     entity_id: sensor.temperature6
     id: temperature6
+    internal: true
   - platform: homeassistant
     name: "Tank Sensor 7 HA"
     entity_id: sensor.temperature7
     id: temperature7
+    internal: true
   - platform: homeassistant
     name: "HW Remaining L"
     entity_id: sensor.hot_water_remaining_l
     id: hwremaining_l
+    internal: true
   - platform: homeassistant
     id: current_temperature
     entity_id: climate.your_thermostat
     attribute: current_temperature
+    internal: true
   - platform: homeassistant
     id: target_temperature
     entity_id: climate.your_thermostat
     attribute: temperature
+    internal: true
 
 text_sensor:
   - platform: wifi_info
@@ -161,13 +178,12 @@ text_sensor:
     id: ch_mode
     entity_id: climate.your_thermostat
     attribute: preset_mode
+    internal: true
   - platform: homeassistant
     id: dhw_mode
     entity_id: water_heater.hot_water
     attribute: operation_mode
-
-
-
+    internal: true
 
 output:
   - platform: ledc
@@ -178,6 +194,11 @@ output:
     id: gpio_32_backlight_pwm
     inverted: true
 
+# this works but the sound is really not that amazing!
+rtttl:
+  output: beeper
+  on_finished_playback:
+    - logger.log: 'Song ended!'
 
 script:
   - id: beep
@@ -290,6 +311,10 @@ binary_sensor:
   - platform: homeassistant
     id: solar_heater
     entity_id: switch.immersion_heater
+    internal: true
+  - platform: homeassistant
+    id: ip_ping
+    entity_id: binary_sensor.internet_ip_ping
     internal: true
 
 
@@ -434,12 +459,11 @@ display:
          it.image(it.get_width() - 50-16, 203, id(sun_gif));
       }
 
-      if (id(conservatory_door_lock).state) {
-        it.print(50, 68, id(font_icon),  my_red, TextAlign::BOTTOM_CENTER, "\U000F0FC6");
-        it.print(50, 69, id(font_sml), my_red, TextAlign::TOP_CENTER, "Conservatory");
+      if (!id(ip_ping).state) {
+        it.print(it.get_width()/2, 200, id(font_icon), my_red, TextAlign::BOTTOM_CENTER, "\U000F0319");
+        it.print(it.get_width()/2, 201, id(font_sml), my_red, TextAlign::TOP_CENTER, "Internet offline");
       }
-
-      if (id(garage_door_lock).state || id(kitchen_door_lock).state || id(garage_door_lock).state) {
+      else if (id(garage_door_lock).state || id(kitchen_door_lock).state || id(garage_door_lock).state) {
         it.print(it.get_width()/2, 200, id(font_icon), my_red, TextAlign::BOTTOM_CENTER, "\U000F0FC6");
         it.printf(it.get_width()/2, 201, id(font_sml), my_red, TextAlign::TOP_CENTER, "%s%s%s",
           id(conservatory_door_lock).state ? "Conservatory " : "",
