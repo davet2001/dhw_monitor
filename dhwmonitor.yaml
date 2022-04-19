@@ -18,7 +18,7 @@ wifi:
   domain: .thompson.lan
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "Waterdepth1 Fallback Hotspot"
+    ssid: "DHWMonitor1 Fallback Hotspot"
     password: "mYJr5Q9cloL4"
 
 # Enable logging
@@ -32,7 +32,7 @@ api:
         song_str: string
       then:
         - rtttl.play:
-            rtttl: !lambda 'return song_str;'
+            rtttl: !lambda "return song_str;"
 ota:
 
 time:
@@ -55,9 +55,9 @@ font:
     id: font_icon
     size: 30
     glyphs: [
-      "\U000F0FC6", # mdi-lock-open
-      "\U000F0319", # mdi-lan-disconnect
-    ]
+        "\U000F0FC6", # mdi-lock-open
+        "\U000F0319", # mdi-lan-disconnect
+      ]
 
 image:
   - file: "peter_100x100.png"
@@ -198,7 +198,7 @@ output:
 rtttl:
   output: beeper
   on_finished_playback:
-    - logger.log: 'Song ended!'
+    - logger.log: "Song ended!"
 
 script:
   - id: beep
@@ -214,10 +214,9 @@ script:
       - output.turn_off: beeper
 
 spi:
- clk_pin: 18
- mosi_pin: 23
- miso_pin: 19
-
+  clk_pin: 18
+  mosi_pin: 23
+  miso_pin: 19
 
 xpt2046:
   id: touchscreen
@@ -291,9 +290,9 @@ binary_sensor:
               - homeassistant.service: # also stop the boost.
                   service: hive.boost_hot_water
                   data:
-                    on_off: 'off'
+                    on_off: "off"
                     entity_id: water_heater.hot_water
-                    time_period: '00:01:00'
+                    time_period: "00:01:00"
     # on_state:
     #   - lambda: 'ESP_LOGI("main", "key0: %s", (x ? "touch" : "release"));'
   - platform: homeassistant
@@ -317,7 +316,6 @@ binary_sensor:
     entity_id: binary_sensor.internet_ip_ping
     internal: true
 
-
 select:
   - platform: template
     id: dhw_boost_local
@@ -333,14 +331,10 @@ select:
       - "boost"
     #internal: true
 
-
-
 # font:
 #   - file: "arial.ttf"
 #     id: my_font
 #     size: 20
-
-
 
 # Define a monochromatic, dimmable light for the backlight
 light:
@@ -349,7 +343,6 @@ light:
     name: "ILI9341 Display Backlight"
     id: back_light
     restore_mode: ALWAYS_ON
-
 
 display:
   - platform: ili9341
