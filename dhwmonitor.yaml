@@ -106,6 +106,10 @@ color:
     red: 100%
     green: 3%
     blue: 5%
+  - id: black1
+    red: 0%
+    green: 0%
+    blue: 0%
 
 # spi:
 #   clk_pin: GPIO18
@@ -167,6 +171,23 @@ sensor:
     entity_id: climate.your_thermostat
     attribute: temperature
     internal: true
+  - platform: homeassistant
+    entity_id: input_number.dhw_boost_target
+    id: dhw_boost_tgt_ha
+    internal: false
+
+interval:
+  - interval: 1sec
+    then:
+      if:
+        condition:
+          for:
+            time: 3sec
+            condition:
+              lambda: |-
+                return (int(id(dhw_boost_tgt_ha).state*10) != id(dhw_boost_tgt_local));
+        then:
+          - lambda: "id(dhw_boost_tgt_local) = 0;"
 
 text_sensor:
   - platform: wifi_info
@@ -270,29 +291,48 @@ binary_sensor:
     on_press:
       then:
         - script.execute: beep
+        #- lambda: 'ESP_LOGI("main", "dhwboost pressed");'
         - if:
             condition:
-              lambda: 'return id(dhw_boost_local).state == "none";'
+              lambda: "return (id(dhw_boost_tgt_local) + 5 < 20);"
             then:
-              - select.set:
-                  id: dhw_boost_local
-                  option: "boost"
-              - homeassistant.service: # intelligent boost dhw
-                  service: script.1632605690960
+              #- lambda: 'ESP_LOGI("main", "condition true");'
+              - lambda: "id(dhw_boost_tgt_local) += 5;"
+              #- lambda: 'ESP_LOGI("main", "%.1f", id(dhw_boost_tgt_local));'
             else:
-              - select.set:
-                  id: dhw_boost_local
-                  option: "none"
-              - homeassistant.service: # intelligent boost dhw stop
-                  service: script.turn_off
-                  data:
-                    entity_id: script.1632605690960
-              - homeassistant.service: # also stop the boost.
-                  service: hive.boost_hot_water
-                  data:
-                    on_off: "off"
-                    entity_id: water_heater.hot_water
-                    time_period: "00:01:00"
+              #- lambda: 'ESP_LOGI("main", "condition false");'
+              - lambda: "id(dhw_boost_tgt_local) = 0;"
+        #- lambda: 'ESP_LOGI("main", "setting dhwboost");'
+        - homeassistant.service:
+            service: script.intelligent_boost_hot_water_2
+            data_template:
+              new_boost_target: "{{ my_var }}"
+            variables:
+              my_var: |-
+                return ((float)id(dhw_boost_tgt_local)/10);
+        # - if:
+        #     condition:
+        #       lambda: 'return id(dhw_boost_local).state == "none";'
+        #     then:
+        #       - select.set:
+        #           id: dhw_boost_local
+        #           option: "boost"
+        #       - homeassistant.service: # intelligent boost dhw
+        #           service: script.1632605690960
+        #     else:
+        #       - select.set:
+        #           id: dhw_boost_local
+        #           option: "none"
+        #       - homeassistant.service: # intelligent boost dhw stop
+        #           service: script.turn_off
+        #           data:
+        #             entity_id: script.1632605690960
+        #       - homeassistant.service: # also stop the boost.
+        #           service: hive.boost_hot_water
+        #           data:
+        #             on_off: "off"
+        #             entity_id: water_heater.hot_water
+        #             time_period: "00:01:00"
     # on_state:
     #   - lambda: 'ESP_LOGI("main", "key0: %s", (x ? "touch" : "release"));'
   - platform: homeassistant
@@ -316,13 +356,19 @@ binary_sensor:
     entity_id: binary_sensor.internet_ip_ping
     internal: true
 
+globals:
+  - id: dhw_boost_tgt_local
+    type: int
+    restore_value: no
+    initial_value: "0"
+
 select:
-  - platform: template
-    id: dhw_boost_local
-    optimistic: true
-    options:
-      - "none"
-      - "boost"
+  # - platform: template
+  #   id: dhw_boost_local
+  #   optimistic: true
+  #   options:
+  #     - "none"
+  #     - "boost"
   - platform: template
     id: ch_boost_local
     optimistic: true
@@ -365,7 +411,7 @@ display:
       signed int ssi = (signed int)id(wifi_ssi).state;
       it.strftime(1, 2, id(font_sml), lightblue1, TextAlign::TOP_LEFT, "%H:%M", id(esptime).now());
       it.printf(it.get_width()-30-5, 2, id(font_sml), lightblue1, TextAlign::TOP_RIGHT, "%s", id(wifi_ssid).state.c_str());
-      it.printf(it.get_width()-30, 2, id(font_sml), lightblue1, TextAlign::TOP_LEFT, "%c%c%c%c", ssi > -80 ? '-' : '-', ssi>-75 ? '-' : ' ', ssi>-70 ? '-' : ' ', ssi>-67 ? '-' : ' ');
+      it.printf(it.get_width()-30, 2, id(font_sml), lightblue1, TextAlign::TOP_LEFT, "%c%c%c%c", ssi > -80 ? '-' : 'x', ssi>-75 ? '-' : ' ', ssi>-70 ? '-' : ' ', ssi>-67 ? '-' : ' ');
       // draw temperature gradient filled sausage shaped tank.
       int x = 320-100;
       int y = 22;
@@ -426,8 +472,7 @@ display:
           it.line(x + x1, y + i, x + x2, y + i, c);
       }
 
-      it.printf(320-width/2, 100, id(font_med), COLOR_ON, TextAlign::BOTTOM_CENTER, "%.0fL", id(hwremaining_l).state);
-      it.printf(320-width/2, 102, id(font_med), COLOR_ON, TextAlign::TOP_CENTER, "(%.1f)", id(hwremaining_l).state/120);
+      // CH info
 
       it.printf(it.get_width()/4, 100, id(font_max), COLOR_ON, TextAlign::BOTTOM_CENTER, "%.1f", id(current_temperature).state);
       it.printf(it.get_width()/4, 100, id(font_med), COLOR_ON, TextAlign::TOP_CENTER, "%.1f°C", id(target_temperature).state);
@@ -440,15 +485,22 @@ display:
       if (id(ch_mode).state == "boost") {
          it.image(it.get_width()/4-15, 203, id(flame_gif), COLOR_ON, COLOR_OFF);
       }
-      if (id(dhw_boost_local).state == "boost") {
-        //Color (100, 85, 0) yellow
-        it.print(320-width/2, 140, id(font_med), COLOR_ON, TextAlign::TOP_CENTER, "BOOST");
+
+      // DHW info
+      it.printf(320-width/2, 80, id(font_med), COLOR_ON, TextAlign::BOTTOM_CENTER, "%.0fL", id(hwremaining_l).state);
+      // WIP !!!!!! NEED TO CHANGE 120 to use HA variable, not local literal.
+      it.printf(320-width/2, 75, id(font_med), COLOR_ON, TextAlign::TOP_CENTER, "(%.1f)", id(hwremaining_l).state/120);
+
+      int tgt_local = id(dhw_boost_tgt_local);
+      int tgt_ha = (int)(id(dhw_boost_tgt_ha).state*10);
+
+      if (id(dhw_boost_tgt_local) != 0) {
+        Color c = (tgt_local != tgt_ha) ? (Color::BLACK) : (Color::WHITE);
+        it.print(320-width/2, 150, id(font_med), c, TextAlign::BOTTOM_CENTER, "iBoost");
+        it.printf(320-width/2, 145, id(font_med), c, TextAlign::TOP_CENTER, "%.1f", ((float)tgt_local)/10);
+        it.image(it.get_width() - 50-16, 203, id(flame_gif));
       }
-      //it.printf(320-width/2, 160, id(font_med), COLOR_ON, TextAlign::TOP_CENTER, "s=%s", id(dhw_mode).state.c_str());
-      if (id(dhw_mode).state == "on" || id(dhw_mode).state == "boost") {
-         it.image(it.get_width() - 50-16, 203, id(flame_gif));
-      }
-      else if (id(solar_heater).state) {
+      if (id(solar_heater).state) {
          it.image(it.get_width() - 50-16, 203, id(sun_gif));
       }
 
