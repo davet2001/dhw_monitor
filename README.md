@@ -14,4 +14,6 @@ Connected a series 7 of DS18B20 sensors to the tank via a sonoff TH16 allowing r
 
 Then an ESPhome controlled AZ-Touch box mounted on the wall displays a picture of the tank, ranging from red to blue showing the 'level' of hot water.  On top of this tank is the estimated number of litres of 40degC water available, as well as the approx number of baths this produces.
 
+![image](https://user-images.githubusercontent.com/17680170/189232295-9f3f7da4-25b9-4763-ba87-0b5c49371fa3.png)
+
 The aim: people look at this display before deciding to boost the water with gas.
