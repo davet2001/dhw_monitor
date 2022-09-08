@@ -1,6 +1,8 @@
 # Domestic Hot Water Monitor
 ## Summary
 An ESP32 controlled Home-Assistant connected wall mounted display to provide accurate heating information to help save energy.
+![image](https://user-images.githubusercontent.com/17680170/189232295-9f3f7da4-25b9-4763-ba87-0b5c49371fa3.png)
+
 ## Background
 My house has a hot water tank, heated by a natural gas boiler.  Backup heating is available via an electric heating element ("immersion heater").  Generally this tank gets heated up at strategic times of the day, then used by the family (showers, baths etc) in an unpredictable pattern.
 In addition, last year I set up an intelligent controller to switch on the immersion heater when our solar panels are producing excess electricity.  In normal sunny weather (spring-autumn) this is more than enough to heat the tank.
@@ -13,7 +15,5 @@ So the question is complex.
 Connected a series 7 of DS18B20 sensors to the tank via a sonoff TH16 allowing reporting of the temperature at 7 levels.  Aside: I made a small cgi script https://github.com/davet2001/miscellaneous/blob/master/dhw_tank.cgi that visualises this.
 
 Then an ESPhome controlled AZ-Touch box mounted on the wall displays a picture of the tank, ranging from red to blue showing the 'level' of hot water.  On top of this tank is the estimated number of litres of 40degC water available, as well as the approx number of baths this produces.
-
-![image](https://user-images.githubusercontent.com/17680170/189232295-9f3f7da4-25b9-4763-ba87-0b5c49371fa3.png)
 
 The aim: people look at this display before deciding to boost the water with gas.
