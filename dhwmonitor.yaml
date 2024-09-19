@@ -5,6 +5,8 @@ esphome:
   board: esp32doit-devkit-v1
   includes:
     - dhwmonitor.h
+    - text_wrap.h
+    - text_wrap.cpp
   on_boot:
     priority: 30
     then:
@@ -12,10 +14,12 @@ esphome:
           id: back_light
           brightness: 60%
 
+#bluetooth_proxy:
+
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  domain: .thompson.lan
+  domain: .local
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "DHWMonitor1 Fallback Hotspot"
@@ -34,6 +38,7 @@ api:
         - rtttl.play:
             rtttl: !lambda "return song_str;"
 ota:
+  platform: esphome
 
 time:
   - platform: homeassistant
@@ -58,16 +63,6 @@ font:
         "\U000F0FC6", # mdi-lock-open
         "\U000F0319", # mdi-lan-disconnect
       ]
-
-image:
-  - file: "peter_100x100.png"
-    id: gradient_img
-    resize: 100x100
-    type: RGB24
-  - file: "gradient_100x100.jpeg"
-    id: gradient_img2
-    resize: 100x100
-    type: RGB24
 
 animation:
   - file: "flame10.gif"
@@ -163,12 +158,12 @@ sensor:
     internal: true
   - platform: homeassistant
     id: current_temperature
-    entity_id: climate.your_thermostat
+    entity_id: climate.heating
     attribute: current_temperature
     internal: true
   - platform: homeassistant
     id: target_temperature
-    entity_id: climate.your_thermostat
+    entity_id: climate.heating
     attribute: temperature
     internal: true
   - platform: homeassistant
@@ -205,6 +200,12 @@ text_sensor:
     entity_id: water_heater.hot_water
     attribute: operation_mode
     internal: true
+  - platform: homeassistant
+    id: votd_text
+    entity_id: sensor.votd_text
+  - platform: homeassistant
+    id: votd_ref
+    entity_id: sensor.votd_ref
 
 output:
   - platform: ledc
@@ -224,7 +225,8 @@ rtttl:
 script:
   - id: beep
     then:
-      - output.turn_on: beeper
+      #beeper temporarily disabled
+      - output.turn_off: beeper
       - output.ledc.set_frequency:
           id: beeper
           frequency: "2000Hz"
@@ -239,102 +241,106 @@ spi:
   mosi_pin: 23
   miso_pin: 19
 
-xpt2046:
-  id: touchscreen
+touchscreen:
+  platform: xpt2046
+  id: tscreen
   cs_pin: 14
-  irq_pin: 27
+  interrupt_pin: 27
   update_interval: 50ms
-  report_interval: 1s
-  dimension_x: 240
-  dimension_y: 320
-  #swap_x_y: true
-  on_state:
+  #report_interval: 1s
+
+  calibration:
+    x_min: 3839
+    x_max: 269
+    y_min: 257
+    y_max: 3855
+  transform:
+    mirror_x: false
+    mirror_y: true
+    swap_xy: true
+  on_touch:
     - lambda: |-
-        if (touched)
-          ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%d",
-              id(touchscreen).x,
-              id(touchscreen).y,
-              id(touchscreen).x_raw,
-              id(touchscreen).y_raw
-              );
+        ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%d",
+            touch.x,
+            touch.y,
+            touch.x_raw,
+            touch.y_raw
+            );
 
 binary_sensor:
-  - platform: xpt2046
-    xpt2046_id: touchscreen
-    id: ch_boost_key0
-    x_min: 20 #0+20
-    x_max: 220 #240-20
-    y_min: 180 #320/2+20
-    y_max: 300 #320-20
-    on_press:
-      then:
-        - script.execute: beep
-        - if:
-            condition:
-              lambda: 'return id(ch_boost_local).state == "none";'
-            then:
-              - select.set:
-                  id: ch_boost_local
-                  option: "boost"
-            else:
-              - select.set:
-                  id: ch_boost_local
-                  option: "none"
-
-  - platform: xpt2046
-    xpt2046_id: touchscreen
+  # - platform: touchscreen
+  #   id: ch_boost_key0
+  #   x_min: 20 #0+20
+  #   x_max: 180 #320/2-20
+  #   y_min: 20 #0+20
+  #   y_max: 220 #240-20
+  #   on_press:
+  #     then:
+  #       - script.execute: beep
+  #       - if:
+  #           condition:
+  #             lambda: 'return id(ch_boost_local).state == "none";'
+  #           then:
+  #             - select.set:
+  #                 id: ch_boost_local
+  #                 option: "boost"
+  #           else:
+  #             - select.set:
+  #                 id: ch_boost_local
+  #                 option: "none"
+  - platform: touchscreen
     id: dhw_boost_key0
-    x_min: 20 #0+20
-    x_max: 220 #240-20
+    x_min: 180 #320/2+20
+    x_max: 300 #320-20
     y_min: 20 #0+20
-    y_max: 180 #320/2-20
+    y_max: 220 #240-20
     on_press:
       then:
         - script.execute: beep
-        #- lambda: 'ESP_LOGI("main", "dhwboost pressed");'
-        - if:
-            condition:
-              lambda: "return (id(dhw_boost_tgt_local) + 5 < 20);"
-            then:
-              #- lambda: 'ESP_LOGI("main", "condition true");'
-              - lambda: "id(dhw_boost_tgt_local) += 5;"
-              #- lambda: 'ESP_LOGI("main", "%.1f", id(dhw_boost_tgt_local));'
-            else:
-              #- lambda: 'ESP_LOGI("main", "condition false");'
-              - lambda: "id(dhw_boost_tgt_local) = 0;"
-        #- lambda: 'ESP_LOGI("main", "setting dhwboost");'
-        - homeassistant.service:
-            service: script.intelligent_boost_hot_water_2
-            data_template:
-              new_boost_target: "{{ my_var }}"
-            variables:
-              my_var: |-
-                return ((float)id(dhw_boost_tgt_local)/10);
-        # - if:
-        #     condition:
-        #       lambda: 'return id(dhw_boost_local).state == "none";'
-        #     then:
-        #       - select.set:
-        #           id: dhw_boost_local
-        #           option: "boost"
-        #       - homeassistant.service: # intelligent boost dhw
-        #           service: script.1632605690960
-        #     else:
-        #       - select.set:
-        #           id: dhw_boost_local
-        #           option: "none"
-        #       - homeassistant.service: # intelligent boost dhw stop
-        #           service: script.turn_off
-        #           data:
-        #             entity_id: script.1632605690960
-        #       - homeassistant.service: # also stop the boost.
-        #           service: hive.boost_hot_water
-        #           data:
-        #             on_off: "off"
-        #             entity_id: water_heater.hot_water
-        #             time_period: "00:01:00"
-    # on_state:
-    #   - lambda: 'ESP_LOGI("main", "key0: %s", (x ? "touch" : "release"));'
+        - lambda: 'ESP_LOGI("main", "dhwboost pressed");'
+  #       - if:
+  #           condition:
+  #             lambda: "return (id(dhw_boost_tgt_local) + 5 < 20);"
+  #           then:
+  #             #- lambda: 'ESP_LOGI("main", "condition true");'
+  #             - lambda: "id(dhw_boost_tgt_local) += 5;"
+  #             #- lambda: 'ESP_LOGI("main", "%.1f", id(dhw_boost_tgt_local));'
+  #           else:
+  #             #- lambda: 'ESP_LOGI("main", "condition false");'
+  #             - lambda: "id(dhw_boost_tgt_local) = 0;"
+  #       #- lambda: 'ESP_LOGI("main", "setting dhwboost");'
+  #       - homeassistant.service:
+  #           service: script.intelligent_boost_hot_water_2
+  #           data_template:
+  #             new_boost_target: "{{ my_var }}"
+  #           variables:
+  #             my_var: |-
+  #               return ((float)id(dhw_boost_tgt_local)/10);
+  # - if:
+  #     condition:
+  #       lambda: 'return id(dhw_boost_local).state == "none";'
+  #     then:
+  #       - select.set:
+  #           id: dhw_boost_local
+  #           option: "boost"
+  #       - homeassistant.service: # intelligent boost dhw
+  #           service: script.1632605690960
+  #     else:
+  #       - select.set:
+  #           id: dhw_boost_local
+  #           option: "none"
+  #       - homeassistant.service: # intelligent boost dhw stop
+  #           service: script.turn_off
+  #           data:
+  #             entity_id: script.1632605690960
+  #       - homeassistant.service: # also stop the boost.
+  #           service: hive.boost_hot_water
+  #           data:
+  #             on_off: "off"
+  #             entity_id: water_heater.hot_water
+  #             time_period: "00:01:00"
+  # on_state:
+  # #   - lambda: 'ESP_LOGI("main", "key0: %s", (x ? "touch" : "release"));'
   - platform: homeassistant
     entity_id: binary_sensor.aqaradoor3
     id: conservatory_door_lock
@@ -391,19 +397,19 @@ light:
     restore_mode: ALWAYS_ON
 
 display:
-  - platform: ili9341
+  - platform: ili9xxx
     model: TFT 2.4
     cs_pin: 5
     dc_pin: 4
-    led_pin: 15
+    #led_pin: 15
     reset_pin: 22
     rotation: 90
     id: tft_ha
     color_palette: IMAGE_ADAPTIVE
     color_palette_images:
-      #- "peter_100x100.png"
       - "display_design.png"
     update_interval: 1s
+    invert_colors: false
     lambda: |-
       id(flame_gif).next_frame();
       id(sun_gif).next_frame();
@@ -515,3 +521,8 @@ display:
           id(kitchen_door_lock).state ? "Kitchen " : "",
           id(garage_door_lock).state ? "Garage " : "");
       }
+
+      x=0; y=138; w=188; int h=102;
+      auto green = Color(0, 255, 0);
+      //it.rectangle(x, y, w, h, green);
+      wrap_text_box2(&it, x, y, w, h, id(font_sml), TextAlign::TOP_LEFT, 1.0, "%s -- %s", id(votd_text).state.c_str(), id(votd_ref).state.c_str());
